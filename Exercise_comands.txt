@@ -1,0 +1,286 @@
+GROUP 1 - HDFS
+-----------------------------------------------------------------------------------------------------------------------------------------
+docker exec -it hadoop-namenode bash
+
+1:
+hadoop fs -ls /user
+
+2:
+hadoop fs -mkdir /user/hdfs_practice
+
+
+3.
+exit
+docker cp "/Users/tiagoreis/Downloads/01_HDFS.pdf" hadoop-namenode:/tmp
+docker exec -it hadoop-namenode bash
+hadoop fs -copyFromLocal "/tmp/01_HDFS.pdf" /user/hdfs_practice/
+
+4.
+hadoop fs -ls /user/hdfs_practice/01_HDFS.pdf
+
+5.
+hadoop fs -setrep 6 /user/hdfs_practice/01_HDFS.pdf
+hadoop fs -ls /user/hdfs_practice/01_HDFS.pdf
+
+6.
+exit
+docker cp "/Users/tiagoreis/Downloads/Tutorial_Hadoop_Installation_Docker.pdf" hadoop-namenode:/tmp
+docker exec -it hadoop-namenode bash
+hadoop fs -copyFromLocal "/tmp/Tutorial_Hadoop_Installation_Docker.pdf" /user/hdfs_practice/
+hadoop fs -chmod -r /user/hdfs_practice/Tutorial_Hadoop_Installation_Docker.pdf
+hadoop fs -ls /user/hdfs_practice/Tutorial_Hadoop_Installation_Docker.pdf
+
+7. (Since I'm using hadoop on docker, I was ot able to see the disk usage of the file itself and the file with the replications)
+hadoop fs -du -s -h /user/hdfs_practice
+hadoop fs -du -s -h /user/hdfs_practice/01_HDFS.pdf
+hadoop fs -du -s -h /user/hdfs_practice/Tutorial_Hadoop_Installation_Docker.pdf
+
+8.
+hadoop fs -cat /user/hdfs_practice/01_HDFS.pdf
+hadoop fs -tail /user/hdfs_practice/01_HDFS.pdf
+hadoop fs -text /user/hdfs_practice/01_HDFS.pdf
+
+9.
+hadoop fs -rm /user/hdfs_practice/01_HDFS.pdf
+hadoop fs -ls /user/hdfs_practice
+
+10.
+hadoop fs -copyToLocal /user/hdfs_practice/Tutorial_Hadoop_Installation_Docker.pdf hadoop-namenode:/tmp
+exit
+docker cp hadoop-namenode:/tmp "/Users/tiagoreis/Downloads"
+
+11.
+"myfileA.txt" will only create the file on the local file system of that specific node (in this case, node 5).
+To make the file available to the entire Hadoop cluster, it needs to be copied to HDFS (Hadoop Distributed File System),
+which is the distributed file system used by Hadoop.
+
+(hadoop fs -copyFromLocal myfileA.txt <hdfs_destination>)
+
+Once the "myfileA.txt" is in the HDFS, it becomes accessible to the entire cluster,
+and it can be manipulated from any node in the cluster using HDFS commands.
+
+
+
+
+
+GROUP 2 - WordCount
+-----------------------------------------------------------------------------------------------------------------------------------------
+Ex:1 -----------------------------------------------------
+# Compile:
+javac -cp "./*" WordCount.java    
+
+# Generate the jar file:
+jar cvf WordCount.jar *.class
+
+hadoop fs -mkdir /user/input
+
+hadoop fs -copyFromLocal "/tmp/hotel_bookings.csv" /user/input/
+hadoop fs -copyFromLocal "/tmp/iris.csv" /user/input/
+hadoop fs -copyFromLocal "/tmp/NetflixOriginals.csv" /user/input/
+hadoop fs -copyFromLocal "/tmp/student_math_clean.csv" /user/input/
+hadoop fs -copyFromLocal "/tmp/student_portuguese_clean.csv" /user/input/
+
+hadoop fs -rm /user/input/hotel_bookings.csv
+hadoop fs -rm /user/input/WordCount.jar
+hadoop fs -rm /user/input/NetflixOriginals.csv
+hadoop fs -rm /user/input/student_math_clean.csv
+hadoop fs -rm /user/input/student_portuguese_clean.csv
+
+hadoop fs -rm -r /user/output
+
+hadoop jar WordCount.jar WordCount /user/input /user/output
+
+hadoop fs -cat /user/output/part-r-00000
+
+
+Ex:2 -----------------------------------------------------
+# Compile: (run inside the docker container)
+javac -cp "./*" WordCategorizer.java
+
+# Generate the jar file: (run inside the docker container)
+jar cvf WordCategorizer.jar *.class
+
+# Use "WordCategorizer.jar" to run "WordCounter" to categorize the words inside "iris.csv":
+cd tmp
+hadoop jar WordCategorizer.jar WordCategorizer /user/input /user/output_1
+
+# Read the output:
+hadoop fs -cat /user/output_1/part-r-00000
+
+
+Ex: 3 -----------------------------------------------------
+# Compile: (run inside the docker container)
+javac -cp "./*" IrisClassCount.java
+
+# Generate the jar file: (run inside the docker container)
+jar cvf IrisClassCount.jar *.class
+
+# Use "IrisClassCount.jar" to run "WordCounter" to categorize the words inside "iris.csv":
+cd tmp
+hadoop jar IrisClassCount.jar IrisClassCount /user/input /user/output_2
+
+# Read the output:
+hadoop fs -cat /user/output_2/part-r-00000
+
+
+
+
+
+GROUP 3 - Hive
+-----------------------------------------------------------------------------------------------------------------------------------------
+Start-up:
+docker exec -it hadoop-hive-server bash
+beeline -u jdbc:hive2://localhost:10000
+
+Ex_1: -----------------------------------------------------
+CREATE TABLE math_students(
+    student_id INT,
+    age INT,
+    travel_time STRING,
+    study_time STRING,
+    absences INT,
+    grade_1 INT,
+    grade_2 INT,
+    final_grade INT,
+    address_type STRING
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE;
+
+
+# EX:2 - load dataset -----------------------------------------------------
+docker cp "/Users/tiagoreis/Documents/student_math_clean.csv" hadoop-hive-server:/tmp
+docker exec -it hadoop-hive-server bash
+hadoop fs -copyFromLocal "/tmp/student_math_clean.csv" /tmp
+hadoop fs -mkdir /user/data/staging/math_st
+hadoop fs -put /tmp/student_math_clean.csv /user
+beeline -u jdbc:hive2://localhost:10000
+LOAD DATA INPATH '/user/student_math_clean.csv' INTO TABLE math_students;
+
+
+# EX:3 -----------------------------------------------------
+SELECT * FROM math_students;
+SELECT COUNT(*) FROM math_students;
+SELECT * FROM math_students LIMIT 10;
+
+
+# EX:5 -----------------------------------------------------
+docker cp "/Users/tiagoreis/Documents/student_portuguese_clean.csv" hadoop-hive-server:/tmp
+docker exec -it hadoop-hive-server bash
+hadoop fs -copyFromLocal "/tmp/student_portuguese_clean.csv" /tmp
+hadoop fs -mkdir /user/data/staging/math_cl
+beeline -u jdbc:hive2://localhost:10000
+
+CREATE EXTERNAL TABLE math_pt_clean(
+    student_id INT,
+    age INT,
+    travel_time STRING,
+    study_time STRING,
+    absences INT,
+    grade_1 INT,
+    grade_2 INT,
+    final_grade INT,
+    address_type STRING
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+LOCATION '/user/data/staging/math_cl'
+TBLPROPERTIES ("skip.header.line.count"="1");
+
+QUIT Hive
+
+hadoop fs -put /tmp/student_portuguese_clean.csv /user/data/staging/math_cl
+beeline -u jdbc:hive2://localhost:10000
+
+# EX:6 -----------------------------------------------------
+SELECT * FROM math_pt_clean;
+SELECT COUNT(*) FROM math_pt_clean;
+SELECT * FROM math_pt_clean LIMIT 10;
+
+
+Querying
+# EX:7 -----------------------------------------------------
+How many students have been approved in math and Portuguese (considering final_grade > 10)?
+    SELECT count(*) AS approved_students
+    FROM math_pt_clean
+    WHERE final_grade > 10;
+
+# EX:8 -----------------------------------------------------
+What is the final_grade average per age in math?
+    SELECT age, AVG(final_grade) AS average_final_grade
+    FROM math_pt_clean
+    GROUP BY age;
+
+
+# EX:9 -----------------------------------------------------
+What are the top 10 Portuguese?
+    SELECT student_id, final_grade
+    FROM math_pt_clean
+    ORDER BY final_grade DESC
+    LIMIT 10;
+
+# EX:10 -----------------------------------------------------
+Write a query to join from both tables using the studing_id (limit the results to 10 rows) and returning id, age, 
+travel_time, math final grade, portuguese final grade and the final grades average (sum math and portuguese grades and divide by 2).
+
+SELECT 
+    A.student_id AS student_id,
+    A.age AS age,
+    A.travel_time AS travel_time,
+    COALESCE((A.grade_1 + B.grade_1) / 2, 0) AS math_final_grade, 
+    COALESCE((A.grade_2 + B.grade_2) / 2, 0) AS portuguese_final_grade,
+    COALESCE((A.grade_1 + B.grade_1 + A.grade_2 + B.grade_2) / 4, 0) AS final_grade
+FROM math_pt_clean A
+LEFT JOIN math_students B ON A.student_id = B.student_id
+LIMIT 10;
+
+
+SELECT *
+FROM math_pt_clean A
+LEFT JOIN math_students B ON A.student_id = B.student_id;
+LIMIT 10;
+
+SELECT count(*)
+FROM math_pt_clean;
+
+SELECT *
+FROM math_students
+LIMIT 10;
+
+
+
+Partitioning
+# EX:11 -----------------------------------------------------
+Create a new table (non-external) final_students partitioned by year, it should contain: 
+studing_id, age, travel_time, math_final_grade, portuguese_final_grade and final_grade
+
+CREATE EXTERNAL TABLE math_pt_clean(
+    student_id INT,
+    age INT,
+    travel_time STRING,
+    math_final_grade STRING,
+    portuguese_final_grade INT,
+    final_grade INT
+)
+PARTITIONED BY(year INT)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+                                                LOCATION '/user/data/staging/math_cl'
+TBLPROPERTIES ("skip.header.line.count"="1");
+
+
+
+# EX:12 -----------------------------------------------------
+12. Load data into the new table using the results of the step 10 query
+
+
+# EX:13 -----------------------------------------------------
+Check again the results doing some simple queries, such as 
+SELECT COUNT(*) and SELECT * FROM ... LIMIT 10. Do you see something different in terms of sorting if we compare it with the results we have seen so far?
+
+
+# EX:14 -----------------------------------------------------
+Check the folder /user/hive/warehouse/ to see the folders the hive uses to storage the data, and explore how hive splits the partitions.

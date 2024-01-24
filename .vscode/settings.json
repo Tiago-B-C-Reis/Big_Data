@@ -1,0 +1,9 @@
+{
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar",
+        "WordCount/commons-cli-1.6.0.jar",
+        "WordCount/hadoop-client-3.3.6.jar",
+        "WordCount/hadoop-common-3.3.6.jar",
+        "WordCount/hadoop-mapreduce-client-core-3.3.6.jar"
+    ]
+}
