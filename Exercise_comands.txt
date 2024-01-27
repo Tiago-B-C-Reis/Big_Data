@@ -300,6 +300,6 @@ FROM final_students;
 # EX:14 -----------------------------------------------------
 Check the folder /user/hive/warehouse/ to see the folders the hive uses to storage the data, and explore how hive splits the partitions.
 
-
-
-FALTA PRINT AO EXERCICIO 6!!!!!
+I have an attached image illustrating how Hive has stored the table data. Essentially, the table data within Hive is organized into two distinct folders. 
+This partitioning is based on the 'year,' and a conditional value of 1 is assigned to students who have passed, 
+while a value of 0 is assigned to students who have failed.
